@@ -58,7 +58,7 @@ with open(gff_file) as file:
         
       if fix_escape_attributes:
         if s[2] == 'CDS':
-          pattern = re.compile('ID=(.*\.cds)\d+;')
+          pattern = re.compile('ID=(.*\.cds)\d+;?')
           s[8] = pattern.sub(r'ID=\1;',s[8])
         
       print("\t".join(s))
