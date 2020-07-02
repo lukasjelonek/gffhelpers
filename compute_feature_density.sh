@@ -37,6 +37,13 @@ compute_mean_feature_length () {
     printf "$MEAN_FORMAT" "$TYPE" $length
 }
 
+compute_median_feature_length () {
+    local TYPE=$1
+    local length=$(awk -v type=$TYPE '$3==type{print ($5-$4+1)}' $GFF_FILE | sort -n | awk '{lengths[NR] = $1}END{if (NR%2) {print lengths[(NR+1)/2]} else {print (lengths[(NR/2)] + lengths[(NR/2)+1])/2.0} } ')
+    local MEDIAN_FORMAT="%39s : %8.2fbp\n"
+    printf "$MEDIAN_FORMAT" "$TYPE" $length
+}
+
 compute_feature_counts () {
     local TYPE=$1
     local count=$(awk -v type=$TYPE '$3==type{count++}END{print count}' $GFF_FILE)
@@ -46,7 +53,12 @@ compute_feature_counts () {
 
 compute_complete_cds_mean_length() {
     local length=$(awk '$3 == "CDS"{features[$9]+=$5-$4+1}END{for (x in features ){sum+=features[x]} print sum/length(features)}' $GFF_FILE)
-    printf "%39s : %8.2fbp\n" "CDS" $length
+    printf "%39s : %8.2fbp\n" "CDS mean" $length
+}
+
+compute_complete_cds_median_length() {
+    local length=$(awk '$3 == "CDS"{features[$9]+=$5-$4+1}END{for (x in features ){print features[x]}}' $GFF_FILE | sort -n | awk '{lengths[NR] = $1}END{if (NR%2) {print lengths[(NR+1)/2]} else {print (lengths[(NR/2)] + lengths[(NR/2)+1])/2.0} }' )
+    printf "%39s : %8.2fbp\n" "CDS median" $length
 }
 
 process_function () {
@@ -64,6 +76,9 @@ process_function "Feature counts" compute_feature_counts
 process_function "Cummulative length statistics" compute_feature_type_total_length
 process_function "Mean length statistics" compute_mean_feature_length
 
-printf "%s\n" "CDS concatenated mean length"
+printf "%s\n" "CDS concatenated length statistics"
 compute_complete_cds_mean_length
+compute_complete_cds_median_length
 sep
+
+process_function "Median length statistics" compute_median_feature_length
