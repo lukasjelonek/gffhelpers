@@ -38,12 +38,18 @@ with open(args.gff_file) as file:
       seq_id = s[1]
       count = 1
 
+    if line.startswith("##FASTA"):
+      # end of gff feature information
+      if seq_id and start < seq_len:
+        print_intergenic_region(seq_id, start, seq_len, count)
+        seq_id = None
+
     if line.startswith("#"):
       # just print the comment lines
       print(line.strip())
     else:
       s = line.split("\t", 9)
-      if s[2] == 'gene':
+      if len(s) == 9 and s[2] == 'gene':
         # add a intergenic_region befor each gene that does not overlap the previous one
         gene_start = int(s[3])
         gene_end = int(s[4])
@@ -54,6 +60,6 @@ with open(args.gff_file) as file:
       # print each feature line
       print(line.strip())
 
-  # don't miss the last intergenic region
+  # don't miss the last intergenic region when no ##FASTA line was seen
   if seq_id and start < seq_len:
     print_intergenic_region(seq_id, start, seq_len, count)

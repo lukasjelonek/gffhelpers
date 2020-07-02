@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 from Bio import SeqIO
 import re
 import argparse
@@ -5,16 +6,18 @@ import argparse
 parser = argparse.ArgumentParser(description="Helper script to fix some errors in gendb-e generated gff files")
 parser.add_argument('--gff', help="The gff3 file to correct")
 parser.add_argument('--fasta', help="The fasta file. Is used to retrieve the contig lengths")
-parser.add_argument('--add_sequence_regions', help="Add '##sequence_region'-lines for each sequence. Requires the fasta file.'")
-parser.add_argument('--fix_escapes_in_attributes', help="If possible escapes '=,&' in the attribute-values.")
-parser.add_argument('--fix_cds_names', help="removes trailing numbers in the cds identifiers. Only useful for gendb-e output.")
+parser.add_argument('--no_add_sequence_regions', help="Add '##sequence_region'-lines for each sequence. Requires the fasta file.")
+parser.add_argument('--no_include_fasta', help="Include the fasta sequence in the gff.")
+parser.add_argument('--no_fix_escapes_in_attributes', help="If possible escapes '=,&' in the attribute-values.")
+parser.add_argument('--no_fix_cds_names', help="removes trailing numbers in the cds identifiers. Only useful for gendb-e output.")
 args = parser.parse_args()
 
 fasta_file = args.fasta
 
-add_sequence_region_entries = True
-fix_escape_attributes = True
-fix_cds_names = True
+add_sequence_region_entries = not args.no_add_sequence_regions
+fix_escape_attributes = not args.no_fix_escapes_in_attributes
+fix_cds_names = not args.no_fix_cds_names
+include_fasta = not args.no_include_fasta
 
 contig_data = {}
 if add_sequence_region_entries:
@@ -59,3 +62,10 @@ with open(gff_file) as file:
           s[8] = pattern.sub(r'ID=\1;',s[8])
         
       print("\t".join(s))
+
+
+if include_fasta:
+  with open(fasta_file) as file:
+    print('##FASTA')
+    for line in file:
+      print(line.strip())
