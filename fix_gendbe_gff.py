@@ -6,10 +6,10 @@ import argparse
 parser = argparse.ArgumentParser(description="Helper script to fix some errors in gendb-e generated gff files")
 parser.add_argument('--gff', help="The gff3 file to correct")
 parser.add_argument('--fasta', help="The fasta file. Is used to retrieve the contig lengths")
-parser.add_argument('--no_add_sequence_regions', help="Add '##sequence_region'-lines for each sequence. Requires the fasta file.")
-parser.add_argument('--no_include_fasta', help="Include the fasta sequence in the gff.")
-parser.add_argument('--no_fix_escapes_in_attributes', help="If possible escapes '=,&' in the attribute-values.")
-parser.add_argument('--no_fix_cds_names', help="removes trailing numbers in the cds identifiers. Only useful for gendb-e output.")
+parser.add_argument('--no_add_sequence_regions', action="store_true", help="Add '##sequence_region'-lines for each sequence. Requires the fasta file.")
+parser.add_argument('--no_include_fasta', action="store_true", help="Include the fasta sequence in the gff.")
+parser.add_argument('--no_fix_escapes_in_attributes', action="store_true", help="If possible escapes '=,&' in the attribute-values.")
+parser.add_argument('--no_fix_cds_names', action="store_true", help="removes trailing numbers in the cds identifiers. Only useful for gendb-e output.")
 args = parser.parse_args()
 
 fasta_file = args.fasta
@@ -31,7 +31,10 @@ print("##gff-version 3")
 with open(gff_file) as file:
   last_id = ""
   for line in file:
-    if not line.startswith("#"):
+    if  line.startswith("#"):
+      if not line.startswith("##gff-version 3"):
+        print(line.strip())
+    else:
       s = line.strip().split("\t", 9)
       cur_id = s[0]
 
