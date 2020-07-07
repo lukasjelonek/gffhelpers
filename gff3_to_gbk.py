@@ -12,6 +12,7 @@ from Bio import SeqIO
 from Bio.Alphabet import generic_dna
 from BCBio import GFF
 from Bio.SeqFeature import CompoundLocation, SeqFeature, FeatureLocation
+from Bio.Data.CodonTable import TranslationError
 
 
 def main(gff_file, fasta_file, organism="unknown", strain="unknown"):
@@ -19,6 +20,7 @@ def main(gff_file, fasta_file, organism="unknown", strain="unknown"):
     fasta_input = SeqIO.to_dict(SeqIO.parse(fasta_file, "fasta", generic_dna))
     gff_iter = GFF.parse(gff_file, fasta_input)
     records = []
+    warnings = 0
     for rec in gff_iter:
       features = []
       if not _has_source_feature(rec):
@@ -35,6 +37,7 @@ def main(gff_file, fasta_file, organism="unknown", strain="unknown"):
           for mrna in _filter_subfeatures(f, 'mRNA'):
             exons = _join_features(_filter_subfeatures(mrna, 'CDS'))
             mrna.location = exons.location
+            locus_tag = mrna.qualifiers['ID'][0]
             features.append(mrna)
             cds = _join_features(_filter_subfeatures(mrna, 'CDS'))
             if 'product' in cds.qualifiers:
@@ -43,11 +46,22 @@ def main(gff_file, fasta_file, organism="unknown", strain="unknown"):
               cds.qualifiers['product'] = []
               for q in mrna.qualifiers['product']:
                 cds.qualifiers['product'].append(_unescape(q))
+            cds.qualifiers['locus_tag'] = [locus_tag]
+            translation = None
+            try:
+              cds.qualifiers['translation'] = [cds.translate(rec.seq, cds=True)]
+            except TranslationError as err:
+              print("WARNING: Translation for cds '" + locus_tag + "' strand:"+ str(mrna.location.strand) +". " + str(err), file=sys.stderr)
+              warnings = warnings + 1
+              cds.qualifiers['translation'] = [cds.translate(rec.seq, cds=False)]
             features.append(cds)
             features.extend(_filter_subfeatures(mrna, 'exon'))
       rec.features = features
       records.append(rec)
     SeqIO.write(records, out_file, "genbank")
+    if warnings:
+      print("Warnings: " + str(warnings), file=sys.stderr)
+
 
 
 def _has_source_feature(record):
@@ -63,6 +77,10 @@ def _join_features(features):
     return features[0]
   else:
     locations = list(map(lambda f: f.location, features))
+    if features[0].strand == 1:
+      locations.sort(key=lambda l: l.start)
+    elif features[0].strand == -1:
+      locations.sort(key=lambda l: l.start, reverse=True)
     loc = CompoundLocation(locations)
     return SeqFeature(
       location=loc,
