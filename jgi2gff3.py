@@ -132,3 +132,4 @@ with gzip.open(filename, "rt") as file:
       entries = [entry]
     else:
       entries.append(entry)
+  process_entry(entries)
